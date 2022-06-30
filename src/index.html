@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>IMG Colour</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<link rel="stylesheet" href="/out.css" />
+	</head>
+	<body>
+		<div class="flex h-screen items-center justify-center bg-indigo-50 px-4">
+			<div
+				class="max-w-md overflow-hidden rounded-xl bg-white shadow-md"
+			>
+				<img id="image-display" src="" alt="" class="h-auto w-full" />
+				<div class="p-5">
+					<div id="swatches" class="flex flex-row justify-between flex-wrap font-mono">
+					</div>
+					<div
+						id="drop-zone"
+						ondrop="dropHandler(event);"
+						ondragover="dragOverEventHandler(event);"
+						class="mx-auto cursor-pointer flex w-full max-w-lg flex-col items-center rounded-xl border-2 border-dashed border-blue-400 bg-white p-6 text-center"
+					>
+						<h2 class="mt-4 text-xl font-medium text-gray-700 tracking-wide">
+							Drop File
+						</h2>
+
+						<p class="mt-2 text-gray-500 tracking-wide">
+							Drop an image into the box to analyze
+						</p>
+					</div>
+				</div>
+			</div>
+		</div>
+
+
+		<script type="text/javascript">
+			function dropHandler(e) {
+				e.preventDefault();
+
+				const start = Date.now();
+
+				if (e.dataTransfer.items) {
+					if (e.dataTransfer.items[0].kind === 'file') {
+						const file = e.dataTransfer.items[0].getAsFile();
+						const output = document.getElementById("image-display");
+						output.src = URL.createObjectURL(file);
+
+						createImageBitmap(file)
+							.then(ibm => {
+								const canvas = new OffscreenCanvas(ibm.width, ibm.height);
+								const ctx = canvas.getContext('2d');
+								ctx.drawImage(ibm, 0, 0);
+								
+								const imageData = ctx.getImageData(0, 0, ibm.width, ibm.height).data;
+
+								const pixelColours = [];
+
+								for (i = 0; i < imageData.length; i += 4) {
+									pixelColours.push([
+										'#',
+										(imageData[i]).toString(16).padStart(2, '0'),
+										(imageData[i+1]).toString(16).padStart(2, '0'),
+										(imageData[i+2]).toString(16).padStart(2, '0'),
+									].join(''));
+								}
+
+								const colourCount = pixelColours.reduce((prev, curr) => {
+										prev[curr] = prev[curr] ? ++prev[curr] : 1;
+										return prev;
+									}, {});
+
+								const sorted = Object.entries(colourCount)
+									.sort((a, b) => {
+										return b[1] - a[1];
+									});
+
+								const top = sorted.slice(0, 8);
+
+								const swatches = document.getElementById('swatches');
+								swatches.textContent = '';
+
+								for (i = 0; i < top.length; i++){
+									let swatch = document.createElement('span');
+									const color = document.createTextNode(top[i][0]);
+									swatch.appendChild(color);
+									swatch.classList.add('p-2');
+									swatch.classList.add('mb-2');
+									swatch.style.backgroundColor = top[i][0];
+
+									swatches.appendChild(swatch);
+								}
+								
+								const end = Date.now();
+
+								console.log(`Time taken: ${end - start}ms`);
+							});
+
+
+					}
+				}
+			}
+
+			function dragOverEventHandler(e) {
+				e.preventDefault();
+			}
+		</script>
+	</body>
+</html>

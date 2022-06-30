@@ -1,0 +1,17 @@
+{
+	"name": "image-colours",
+	"version": "1.0.0",
+	"description": "Get dominant colours from an image",
+	"main": "index.js",
+	"scripts": {
+		"dev": "npx tailwindcss -i ./src/styles.css -o ./src/out.css --watch & http-server src --port 3000"
+	},
+	"author": "Colin McCulloch",
+	"license": "MIT",
+	"prettier": {
+		"useTabs": true
+	},
+	"devDependencies": {
+		"tailwindcss": "^3.1.4"
+	}
+}
