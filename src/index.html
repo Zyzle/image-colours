@@ -5,16 +5,19 @@
 		<title>IMG Colour</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<link rel="stylesheet" href="/out.css" />
+		<script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
 	</head>
 	<body>
-		<div class="flex h-screen items-center justify-center bg-indigo-50 px-4">
-			<div
-				class="max-w-md overflow-hidden rounded-xl bg-white shadow-md"
-			>
+		<div
+			class="grid grid-cols-2 gap-4 h-screen items-center justify-center bg-indigo-50 px-4"
+		>
+			<div class="max-w-md overflow-hidden rounded-xl bg-white shadow-md">
 				<img id="image-display" src="" alt="" class="h-auto w-full" />
 				<div class="p-5">
-					<div id="swatches" class="flex flex-row justify-between flex-wrap font-mono">
-					</div>
+					<div
+						id="swatches"
+						class="flex flex-row justify-between flex-wrap font-mono"
+					></div>
 					<div
 						id="drop-zone"
 						ondrop="dropHandler(event);"
@@ -31,74 +34,209 @@
 					</div>
 				</div>
 			</div>
+			<div id="plot"></div>
 		</div>
 
-
 		<script type="text/javascript">
+			var layout = {
+				autosize: true,
+				scene: {
+					aspectratio: {
+						x: 1,
+						y: 1,
+						z: 1,
+					},
+					xaxis: {
+						type: "linear",
+						zeroline: false,
+						title: "Red",
+					},
+					yaxis: {
+						type: "linear",
+						zeroline: false,
+						title: "Green",
+					},
+					zaxis: {
+						type: "linear",
+						zeroline: false,
+						title: "Blue",
+					},
+				},
+				title: "Image colour clustering",
+			};
+
+			const config = { responsive: true };
+
+			plot = document.getElementById("plot");
+
+			function calcEuclideanDist(p, q) {
+				return Math.sqrt(
+					Math.pow(p.r - q.r, 2) +
+						Math.pow(p.g - q.g, 2) +
+						Math.pow(p.b - q.b, 2)
+				);
+			}
+
+			function calcNewClusters(kClusters, colorData) {
+				const clusteredData = colorData.reduce(
+					(prev, curr) => {
+						const distances = kClusters.map((k) => calcEuclideanDist(k, curr));
+						const minDistance = distances.reduce(
+							(a, b) => Math.min(a, b),
+							Infinity
+						);
+						const selectedK = distances.findIndex((e) => e === minDistance);
+						prev[selectedK] = [...prev[selectedK], curr];
+						return prev;
+					},
+					Array.from({ length: 8 }, () => [])
+				);
+
+				const newKs = clusteredData.map((colors) => {
+					let r = 0;
+					let g = 0;
+					let b = 0;
+
+					colors.forEach((color) => {
+						r += color.r;
+						g += color.g;
+						b += color.b;
+					});
+
+					return {
+						r: Math.round(r / colors.length),
+						g: Math.round(g / colors.length),
+						b: Math.round(b / colors.length),
+					};
+				});
+
+				return newKs;
+			}
+
 			function dropHandler(e) {
 				e.preventDefault();
 
 				const start = Date.now();
 
 				if (e.dataTransfer.items) {
-					if (e.dataTransfer.items[0].kind === 'file') {
+					if (e.dataTransfer.items[0].kind === "file") {
 						const file = e.dataTransfer.items[0].getAsFile();
 						const output = document.getElementById("image-display");
 						output.src = URL.createObjectURL(file);
 
-						createImageBitmap(file)
-							.then(ibm => {
-								const canvas = new OffscreenCanvas(ibm.width, ibm.height);
-								const ctx = canvas.getContext('2d');
-								ctx.drawImage(ibm, 0, 0);
-								
-								const imageData = ctx.getImageData(0, 0, ibm.width, ibm.height).data;
+						createImageBitmap(file).then((ibm) => {
+							const canvas = new OffscreenCanvas(ibm.width, ibm.height);
+							const ctx = canvas.getContext("2d");
+							ctx.drawImage(ibm, 0, 0);
 
-								const pixelColours = [];
+							const imageData = ctx.getImageData(
+								0,
+								0,
+								ibm.width,
+								ibm.height
+							).data;
 
-								for (i = 0; i < imageData.length; i += 4) {
-									pixelColours.push([
-										'#',
-										(imageData[i]).toString(16).padStart(2, '0'),
-										(imageData[i+1]).toString(16).padStart(2, '0'),
-										(imageData[i+2]).toString(16).padStart(2, '0'),
-									].join(''));
-								}
+							let colorData = [];
 
-								const colourCount = pixelColours.reduce((prev, curr) => {
-										prev[curr] = prev[curr] ? ++prev[curr] : 1;
-										return prev;
-									}, {});
+							for (i = 0; i < imageData.length; i += 4) {
+								const colStr = [
+									imageData[i],
+									imageData[i + 1],
+									imageData[i + 2],
+								].join(",");
 
-								const sorted = Object.entries(colourCount)
-									.sort((a, b) => {
-										return b[1] - a[1];
-									});
+								colorData.push(colStr);
+							}
 
-								const top = sorted.slice(0, 8);
+							colorData = [...new Set(colorData)];
 
-								const swatches = document.getElementById('swatches');
-								swatches.textContent = '';
-
-								for (i = 0; i < top.length; i++){
-									let swatch = document.createElement('span');
-									const color = document.createTextNode(top[i][0]);
-									swatch.appendChild(color);
-									swatch.classList.add('p-2');
-									swatch.classList.add('mb-2');
-									swatch.style.backgroundColor = top[i][0];
-
-									swatches.appendChild(swatch);
-								}
-								
-								const end = Date.now();
-
-								console.log(`Time taken: ${end - start}ms`);
+							colorData = colorData.map((v) => {
+								const rgb = v.split(",");
+								return {
+									r: parseInt(rgb[0]),
+									g: parseInt(rgb[1]),
+									b: parseInt(rgb[2]),
+								};
 							});
 
+							let kClusters = Array.from({ length: 8 }, () => {
+								return colorData[Math.floor(Math.random() * colorData.length)];
+							});
 
+							let iterations = 0;
+							let distanceShift = 0;
+							let newClusters = [];
+
+							do {
+								newClusters = calcNewClusters(kClusters, colorData);
+
+								newClusters.forEach((v, i) => {
+									distanceShift += calcEuclideanDist(v, kClusters[i]);
+								});
+
+								distanceShift = distanceShift / newClusters.length;
+
+								console.log(
+									`Iteration: ${iterations}, distance shift: ${distanceShift}`
+								);
+
+								kClusters = newClusters;
+								iterations += 1;
+							} while (distanceShift >= 5 && iterations < 10);
+
+
+							const swatches = document.getElementById("swatches");
+							swatches.textContent = "";
+
+							for (i = 0; i < kClusters.length; i++) {
+								let swatch = document.createElement("span");
+								const colorStr = `#${kClusters[i].r
+									.toString(16)
+									.padStart(2, "0")}${kClusters[i].g
+									.toString(16)
+									.padStart(2, "0")}${kClusters[i].b
+									.toString(16)
+									.padStart(2, "0")}`;
+
+								const color = document.createTextNode(colorStr);
+								swatch.appendChild(color);
+								swatch.classList.add("p-2");
+								swatch.classList.add("mb-2");
+								swatch.style.backgroundColor = colorStr;
+
+								swatches.appendChild(swatch);
+							}
+
+							const end = Date.now();
+
+							console.log(`Time taken: ${end - start}ms`);
+
+							// PLOT DATA
+
+							const plotData = [
+								{
+									x: unpack(colorData, "r"),
+									y: unpack(colorData, "g"),
+									z: unpack(colorData, "b"),
+									mode: "markers",
+									type: "scatter3d",
+									marker: {
+										color: colorData.map((c) => `rgb(${c.r}, ${c.g}, ${c.b})`),
+										size: 2,
+									},
+								},
+							];
+
+							Plotly.newPlot(plot, plotData, layout, config);
+
+							// END PLOT DATA
+						});
 					}
 				}
+			}
+
+			function unpack(rows, key) {
+				return rows.map((r) => r[key]);
 			}
 
 			function dragOverEventHandler(e) {
