@@ -125,8 +125,19 @@
 						output.src = URL.createObjectURL(file);
 
 						createImageBitmap(file).then((ibm) => {
-							const canvas = new OffscreenCanvas(ibm.width, ibm.height);
-							const ctx = canvas.getContext("2d");
+							let ctx;
+
+							if (typeof OffscreenCanvasRenderingContext === "function"){
+								const canvas = new OffscreenCanvas(ibm.width, ibm.height);
+								ctx = canvas.getContext("2d");
+							}
+							else {
+								const canvas = document.createElement("canvas");
+								ctx = canvas.getContext("2d");
+								ctx.canvas.height = ibm.height;
+								ctx.canvas.width = ibm.width;
+							}
+
 							ctx.drawImage(ibm, 0, 0);
 
 							const imageData = ctx.getImageData(
