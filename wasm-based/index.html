@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+		<title>WASM Based</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  	<link href="/out.css" rel="stylesheet">
+		<script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
+  </head>
+  <body>
+    <div
+			class="grid grid-cols-2 gap-4 h-screen items-center justify-center bg-indigo-50 px-4"
+		>
+			<div class="max-w-md overflow-hidden rounded-xl bg-white shadow-md">
+				<img id="image-display" src="" alt="" class="h-auto w-full" />
+				<div class="p-5">
+					<div
+						id="swatches"
+						class="flex flex-row justify-between flex-wrap font-mono"
+					></div>
+					<div
+						id="drop-zone"
+						class="mx-auto cursor-pointer flex w-full max-w-lg flex-col items-center rounded-xl border-2 border-dashed border-blue-400 bg-white p-6 text-center"
+					>
+						<h2 class="mt-4 text-xl font-medium text-gray-700 tracking-wide">
+							Drop File
+						</h2>
+
+						<p class="mt-2 text-gray-500 tracking-wide">
+							Drop an image into the box to analyze
+						</p>
+					</div>
+				</div>
+			</div>
+			<div id="plot"></div>
+		</div>
+    <noscript>This page contains webassembly and javascript content, please enable javascript in your browser.</noscript>
+    <script src="./bootstrap.js"></script>
+  </body>
+</html>

@@ -1,0 +1,39 @@
+{
+  "name": "color-finder",
+  "version": "3.0.0",
+  "description": "wasm-based version of the color-finder",
+  "main": "index.js",
+  "bin": {
+    "create-wasm-app": ".bin/create-wasm-app.js"
+  },
+  "scripts": {
+    "build": "webpack --config webpack.config.js",
+    "start": "webpack-dev-server"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rustwasm/create-wasm-app.git"
+  },
+  "keywords": [
+    "webassembly",
+    "wasm",
+    "rust",
+    "webpack"
+  ],
+  "author": "Colin McCulloch <colin@zyzle.dev>",
+  "license": "MIT",
+  "devDependencies": {
+    "autoprefixer": "^10.4.12",
+    "copy-webpack-plugin": "^5.0.0",
+    "hello-wasm-pack": "^0.1.0",
+    "postcss": "^8.4.18",
+    "postcss-loader": "^4.3.0",
+    "tailwindcss": "^3.1.8",
+    "webpack": "^4.29.3",
+    "webpack-cli": "^3.1.0",
+    "webpack-dev-server": "^3.1.5"
+  },
+  "dependencies": {
+    "colors-wasm": "file:../colors-wasm/pkg"
+  }
+}

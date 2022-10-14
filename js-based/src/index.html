@@ -2,7 +2,7 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<title>IMG Colour</title>
+		<title>JS Based</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<link rel="stylesheet" href="/out.css" />
 		<script src="https://cdn.plot.ly/plotly-2.12.1.min.js"></script>
@@ -124,6 +124,8 @@
 						const output = document.getElementById("image-display");
 						output.src = URL.createObjectURL(file);
 
+						console.time('Build color data');
+
 						createImageBitmap(file).then((ibm) => {
 							let ctx;
 
@@ -170,6 +172,8 @@
 								};
 							});
 
+							console.timeEnd('Build color data');
+
 							let kClusters = Array.from({ length: 8 }, () => {
 								return colorData[Math.floor(Math.random() * colorData.length)];
 							});
@@ -179,18 +183,17 @@
 							let newClusters = [];
 
 							do {
+								distanceShift = 0;
+								console.time('Calc new clusters');
 								newClusters = calcNewClusters(kClusters, colorData);
+								console.timeEnd('Calc new clusters');
 
 								newClusters.forEach((v, i) => {
 									distanceShift += calcEuclideanDist(v, kClusters[i]);
 								});
-
+								
 								distanceShift = distanceShift / newClusters.length;
-
-								console.log(
-									`Iteration: ${iterations}, distance shift: ${distanceShift}`
-								);
-
+								
 								kClusters = newClusters;
 								iterations += 1;
 							} while (distanceShift >= 5 && iterations < 10);
