@@ -47,11 +47,10 @@ dropZone.addEventListener('drop', e => {
 			const output = document.getElementById("image-display");
 			output.src = URL.createObjectURL(file);
 
-			console.time('Build color data');
-
 			createImageBitmap(file).then((ibm) => {
 				let ctx;
 
+				console.time('finding canvas element');
 				if (typeof OffscreenCanvasRenderingContext === "function") {
 					const canvas = new OffscreenCanvas(ibm.width, ibm.height);
 					ctx = canvas.getContext("2d");
@@ -61,41 +60,13 @@ dropZone.addEventListener('drop', e => {
 					ctx.canvas.height = ibm.height;
 					ctx.canvas.width = ibm.width;
 				}
+				console.timeEnd("finding canvas element");
 
+				console.time('drawing image');
 				ctx.drawImage(ibm, 0, 0);
+				console.timeEnd("drawing image");
 
-				const imageData = ctx.getImageData(0, 0, ibm.width, ibm.height).data;
-
-				let colorData = [];
-
-				for (let i = 0; i < imageData.length; i += 4) {
-					const colStr = [
-						imageData[i],
-						imageData[i + 1],
-						imageData[i + 2],
-					].join(",");
-
-					colorData.push(colStr);
-				}
-
-				colorData = [...new Set(colorData)];
-
-				colorData = colorData.map((v) => {
-					const rgb = v.split(",");
-					return {
-						r: parseInt(rgb[0]),
-						g: parseInt(rgb[1]),
-						b: parseInt(rgb[2]),
-					};
-				});
-
-				console.timeEnd('Build color data');
-
-				let kClusters = Array.from({ length: 8 }, () => {
-					return colorData[Math.floor(Math.random() * colorData.length)];
-				});
-
-				const result = wasm.find_colors(colorData, kClusters);
+				const result = wasm.find_colors(ctx, ibm.width, ibm.height);
 
 				const swatches = document.getElementById("swatches");
 				swatches.textContent = "";
@@ -116,25 +87,25 @@ dropZone.addEventListener('drop', e => {
 
 				console.log(`Time taken: ${end - start}ms`);
 
-				// PLOT DATA
+				// // PLOT DATA
 
-				const plotData = [
-					{
-						x: unpack(colorData, "r"),
-						y: unpack(colorData, "g"),
-						z: unpack(colorData, "b"),
-						mode: "markers",
-						type: "scatter3d",
-						marker: {
-							color: colorData.map((c) => `rgb(${c.r}, ${c.g}, ${c.b})`),
-							size: 2,
-						},
-					},
-				];
+				// const plotData = [
+				// 	{
+				// 		x: unpack(colorData, "r"),
+				// 		y: unpack(colorData, "g"),
+				// 		z: unpack(colorData, "b"),
+				// 		mode: "markers",
+				// 		type: "scatter3d",
+				// 		marker: {
+				// 			color: colorData.map((c) => `rgb(${c.r}, ${c.g}, ${c.b})`),
+				// 			size: 2,
+				// 		},
+				// 	},
+				// ];
 
-				Plotly.newPlot(plot, plotData, layout, config);
+				// Plotly.newPlot(plot, plotData, layout, config);
 
-				// END PLOT DATA
+				// // END PLOT DATA
 			});
 		}
 	}

@@ -1,9 +1,11 @@
 mod utils;
 
+use itertools::Itertools;
+use rand::seq::{IteratorRandom};
 use serde_derive::{Deserialize, Serialize};
 use utils::set_panic_hook;
 use wasm_bindgen::prelude::*;
-use web_sys::console;
+use web_sys::{console, CanvasRenderingContext2d};
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -11,7 +13,7 @@ use web_sys::console;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-#[derive(Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Eq, Hash, PartialEq, Serialize)]
 struct Color {
     r: i32,
     g: i32,
@@ -19,25 +21,48 @@ struct Color {
 }
 
 #[wasm_bindgen]
-pub fn find_colors(color_data: JsValue, k_clusters: JsValue) -> JsValue {
+pub fn find_colors(ctx: &CanvasRenderingContext2d, width: u32, height: u32) -> JsValue {
     set_panic_hook();
 
-    let colors: Vec<Color> = serde_wasm_bindgen::from_value(color_data).unwrap();
-    let mut clusters: Vec<Color> = serde_wasm_bindgen::from_value(k_clusters).unwrap();
+    console::time_with_label("grabbing image data");
+    let image_data = ctx.get_image_data(0.0, 0.0, width as f64, height as f64).unwrap();
+    
+    let color_data = image_data.data();
+    console::time_end_with_label("grabbing image data");
+
+    let mut pixels: Vec<Color> = vec![];
+
+    console::time_with_label("dataset iterator");
+    for i in (0..color_data.len()).step_by(4) {
+        pixels.push(Color {
+            r: color_data[i] as i32,
+            g: color_data[i + 1] as i32,
+            b: color_data[i + 2] as i32,
+        });
+    };
+    console::time_end_with_label("dataset iterator");
+
+    console::time_with_label("unique");
+    let colors: Vec<Color> = pixels.into_iter().unique().collect();
+    console::time_end_with_label("unique");
+
+    let rng = &mut rand::thread_rng();
+
+    console::time_with_label("pick 8");
+    let mut clusters = colors.clone().into_iter().choose_multiple(rng, 8);
+    console::time_end_with_label("pick 8");
 
     let mut iterations = 0;
-    let mut distance_shift = 0_f32;
+    let mut distance_shift = 0.0;
 
     loop {
         console::time_with_label("Calc new clusters");
         let new_clusters = calc_new_clusters(&clusters, &colors);
         console::time_end_with_label("Calc new clusters");
 
-        console::time_with_label("Calc distance shift");
         for i in 0..new_clusters.len() {
             distance_shift += calc_euclidean_dist(&new_clusters[i], &clusters[i])
         }
-        console::time_end_with_label("Calc distance shift");
 
         distance_shift /= new_clusters.len() as f32;
 
@@ -55,7 +80,7 @@ pub fn find_colors(color_data: JsValue, k_clusters: JsValue) -> JsValue {
         clusters
             .iter()
             .map(|c| format!("#{:02x}{:02x}{:02x}", c.r, c.g, c.b))
-            .map(|s| JsValue::from(&s[..]))
+            .map(|s| JsValue::from(s))
             .collect::<js_sys::Array>(),
     )
 }

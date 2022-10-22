@@ -1,6 +1,6 @@
 {
   "name": "color-finder",
-  "version": "3.0.0",
+  "version": "3.1.0",
   "description": "wasm-based version of the color-finder",
   "main": "index.js",
   "bin": {
