@@ -1,4 +1,4 @@
-import * as wasm from 'colors-wasm';
+import * as wasm from '@zyzle/image-kmeans';
 
 const dropZone = document.getElementById('drop-zone');
 const plot = document.getElementById("plot");

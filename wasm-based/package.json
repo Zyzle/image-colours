@@ -34,6 +34,6 @@
     "webpack-dev-server": "^3.1.5"
   },
   "dependencies": {
-    "colors-wasm": "file:../colors-wasm/pkg"
+    "@zyzle/image-kmeans": "^1.0.0"
   }
 }
