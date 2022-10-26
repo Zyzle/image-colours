@@ -36,10 +36,8 @@ function unpack(rows, key) {
 	return rows.map((r) => r[key]);
 }
 
-dropZone.addEventListener('drop', e => {
+dropZone.addEventListener('drop', async (e) => {
 	e.preventDefault();
-
-	const start = Date.now();
 
 	if (e.dataTransfer.items) {
 		if (e.dataTransfer.items[0].kind === "file") {
@@ -66,26 +64,50 @@ dropZone.addEventListener('drop', e => {
 				ctx.drawImage(ibm, 0, 0);
 				console.timeEnd("drawing image");
 
-				const result = wasm.find_colors(ctx, ibm.width, ibm.height);
+				const wasmStart = Date.now();
+				const wasmResult = wasm.find_colors(ctx, ibm.width, ibm.height);
+				const wasmEnd = Date.now();
 
-				const swatches = document.getElementById("swatches");
-				swatches.textContent = "";
+				const wasmSwatches = document.getElementById("wasm-swatches");
+				const wasmTime = document.getElementById("wasm-time");
+				wasmTime.textContent = `${wasmEnd - wasmStart}ms`;
 
-				for (let i = 0; i < result.length; i++) {
+				wasmSwatches.textContent = "";
+
+				for (let i = 0; i < wasmResult.length; i++) {
 					let swatch = document.createElement("span");
 
-					const color = document.createTextNode(result[i]);
+					const color = document.createTextNode(wasmResult[i]);
 					swatch.appendChild(color);
 					swatch.classList.add("p-2");
 					swatch.classList.add("mb-2");
-					swatch.style.backgroundColor = result[i];
+					swatch.style.backgroundColor = wasmResult[i];
 
-					swatches.appendChild(swatch);
+					wasmSwatches.appendChild(swatch);
 				}
 
-				const end = Date.now();
+				const jsStart = Date.now();
+				const jsResult = jsFindColors(ctx, ibm.width, ibm.height);
+				const jsEnd = Date.now();
 
-				console.log(`Time taken: ${end - start}ms`);
+				const jsSwatches = document.getElementById("js-swatches");
+        const jsTime = document.getElementById("js-time");
+        jsTime.textContent = `${jsEnd - jsStart}ms`;
+        jsSwatches.textContent = "";
+
+        for (let i = 0; i < jsResult.length; i++) {
+          let swatch = document.createElement("span");
+
+          const color = document.createTextNode(jsResult[i]);
+          swatch.appendChild(color);
+          swatch.classList.add("p-2");
+          swatch.classList.add("mb-2");
+          swatch.style.backgroundColor = jsResult[i];
+
+          jsSwatches.appendChild(swatch);
+        }
+
+				// console.log(`Time taken: ${end - start}ms`);
 
 				// // PLOT DATA
 
@@ -114,3 +136,102 @@ dropZone.addEventListener('drop', e => {
 dropZone.addEventListener('dragover', e => {
 	e.preventDefault();
 });
+
+
+function calcEuclideanDist(p, q) {
+  return Math.sqrt(
+    Math.pow(p.r - q.r, 2) + Math.pow(p.g - q.g, 2) + Math.pow(p.b - q.b, 2)
+  );
+}
+
+function calcNewClusters(kClusters, colorData) {
+  const clusteredData = colorData.reduce(
+    (prev, curr) => {
+      const distances = kClusters.map((k) => calcEuclideanDist(k, curr));
+      const minDistance = distances.reduce((a, b) => Math.min(a, b), Infinity);
+      const selectedK = distances.findIndex((e) => e === minDistance);
+      prev[selectedK] = [...prev[selectedK], curr];
+      return prev;
+    },
+    Array.from({ length: 8 }, () => [])
+  );
+
+  const newKs = clusteredData.map((colors) => {
+    let r = 0;
+    let g = 0;
+    let b = 0;
+
+    colors.forEach((color) => {
+      r += color.r;
+      g += color.g;
+      b += color.b;
+    });
+
+    return {
+      r: Math.round(r / colors.length),
+      g: Math.round(g / colors.length),
+      b: Math.round(b / colors.length),
+    };
+  });
+
+  return newKs;
+}
+
+function jsFindColors(ctx, imageWidth, imageHeight) {
+	console.time('Build color data');
+	const imageData = ctx.getImageData(0, 0, imageWidth, imageHeight).data;
+
+  let colorData = [];
+
+  for (let i = 0; i < imageData.length; i += 4) {
+    const colStr = [imageData[i], imageData[i + 1], imageData[i + 2]].join(",");
+
+    colorData.push(colStr);
+  }
+
+  colorData = [...new Set(colorData)];
+
+  colorData = colorData.map((v) => {
+    const rgb = v.split(",");
+    return {
+      r: parseInt(rgb[0]),
+      g: parseInt(rgb[1]),
+      b: parseInt(rgb[2]),
+    };
+  });
+
+  console.timeEnd("Build color data");
+
+  let kClusters = Array.from({ length: 8 }, () => {
+    return colorData[Math.floor(Math.random() * colorData.length)];
+  });
+
+  let iterations = 0;
+  let distanceShift = 0;
+  let newClusters = [];
+
+  do {
+    distanceShift = 0;
+    console.time("Calc new clusters");
+    newClusters = calcNewClusters(kClusters, colorData);
+    console.timeEnd("Calc new clusters");
+
+    newClusters.forEach((v, i) => {
+      distanceShift += calcEuclideanDist(v, kClusters[i]);
+    });
+
+    distanceShift = distanceShift / newClusters.length;
+
+    kClusters = newClusters;
+    iterations += 1;
+  } while (distanceShift >= 5 && iterations < 10);
+
+	return kClusters.map(
+    (k) => `#${k.r
+				.toString(16).padStart(2, "0")}${k.g
+        .toString(16)
+        .padStart(2, "0")}${k.b
+				.toString(16)
+				.padStart(2, "0")}`
+  );
+}
