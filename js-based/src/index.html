@@ -28,7 +28,7 @@
 							Drop File
 						</h2>
 
-						<p class="mt-2 text-gray-500 tracking-wide">
+						<p class="mt-2 text-gray-500 tracking-wide mb-5">
 							Drop an image into the box to analyze
 						</p>
 					</div>
@@ -124,16 +124,15 @@
 						const output = document.getElementById("image-display");
 						output.src = URL.createObjectURL(file);
 
-						console.time('Build color data');
+						console.time("Build color data");
 
 						createImageBitmap(file).then((ibm) => {
 							let ctx;
 
-							if (typeof OffscreenCanvasRenderingContext === "function"){
+							if (typeof OffscreenCanvasRenderingContext === "function") {
 								const canvas = new OffscreenCanvas(ibm.width, ibm.height);
 								ctx = canvas.getContext("2d");
-							}
-							else {
+							} else {
 								const canvas = document.createElement("canvas");
 								ctx = canvas.getContext("2d");
 								ctx.canvas.height = ibm.height;
@@ -172,7 +171,7 @@
 								};
 							});
 
-							console.timeEnd('Build color data');
+							console.timeEnd("Build color data");
 
 							let kClusters = Array.from({ length: 8 }, () => {
 								return colorData[Math.floor(Math.random() * colorData.length)];
@@ -184,20 +183,19 @@
 
 							do {
 								distanceShift = 0;
-								console.time('Calc new clusters');
+								console.time("Calc new clusters");
 								newClusters = calcNewClusters(kClusters, colorData);
-								console.timeEnd('Calc new clusters');
+								console.timeEnd("Calc new clusters");
 
 								newClusters.forEach((v, i) => {
 									distanceShift += calcEuclideanDist(v, kClusters[i]);
 								});
-								
+
 								distanceShift = distanceShift / newClusters.length;
-								
+
 								kClusters = newClusters;
 								iterations += 1;
 							} while (distanceShift >= 5 && iterations < 10);
-
 
 							const swatches = document.getElementById("swatches");
 							swatches.textContent = "";

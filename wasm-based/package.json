@@ -34,6 +34,6 @@
     "webpack-dev-server": "^3.1.5"
   },
   "dependencies": {
-    "@zyzle/image-kmeans": "^1.0.0"
+    "@zyzle/image-kmeans": "file:../../image-kmeans/pkg"
   }
 }

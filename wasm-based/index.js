@@ -1,142 +1,173 @@
-import * as wasm from '@zyzle/image-kmeans';
+import { ImageKmeans } from "@zyzle/image-kmeans";
 
-const dropZone = document.getElementById('drop-zone');
+const dropZone = document.getElementById("drop-zone");
 const plot = document.getElementById("plot");
 
 const layout = {
-	autosize: true,
-	scene: {
-		aspectratio: {
-			x: 1,
-			y: 1,
-			z: 1,
-		},
-		xaxis: {
-			type: "linear",
-			zeroline: false,
-			title: "Red",
-		},
-		yaxis: {
-			type: "linear",
-			zeroline: false,
-			title: "Green",
-		},
-		zaxis: {
-			type: "linear",
-			zeroline: false,
-			title: "Blue",
-		},
-	},
-	title: "Image colour clustering",
+  autosize: true,
+  scene: {
+    aspectratio: {
+      x: 1,
+      y: 1,
+      z: 1,
+    },
+    xaxis: {
+      type: "linear",
+      zeroline: false,
+      title: "Red",
+    },
+    yaxis: {
+      type: "linear",
+      zeroline: false,
+      title: "Green",
+    },
+    zaxis: {
+      type: "linear",
+      zeroline: false,
+      title: "Blue",
+    },
+  },
+  title: "Image colour clustering",
 };
 
 const config = { responsive: true };
 
 function unpack(rows, key) {
-	return rows.map((r) => r[key]);
+  return rows.map((r) => r[key]);
 }
 
-dropZone.addEventListener('drop', async (e) => {
-	e.preventDefault();
+dropZone.addEventListener("drop", async (e) => {
+  e.preventDefault();
 
-	if (e.dataTransfer.items) {
-		if (e.dataTransfer.items[0].kind === "file") {
-			const file = e.dataTransfer.items[0].getAsFile();
-			const output = document.getElementById("image-display");
-			output.src = URL.createObjectURL(file);
+  if (e.dataTransfer.items && e.dataTransfer.items[0].kind === "file") {
+    const file = e.dataTransfer.items[0].getAsFile();
+    const output = document.getElementById("image-display");
+    output.src = URL.createObjectURL(file);
+  }
+});
 
-			createImageBitmap(file).then((ibm) => {
-				let ctx;
+/*dropZone.addEventListener("drop", async (e) => {
+  e.preventDefault();
 
-				console.time('finding canvas element');
-				if (typeof OffscreenCanvasRenderingContext === "function") {
-					const canvas = new OffscreenCanvas(ibm.width, ibm.height);
-					ctx = canvas.getContext("2d");
-				} else {
-					const canvas = document.createElement("canvas");
-					ctx = canvas.getContext("2d");
-					ctx.canvas.height = ibm.height;
-					ctx.canvas.width = ibm.width;
-				}
-				console.timeEnd("finding canvas element");
+  // const start = Date.now();
 
-				console.time('drawing image');
-				ctx.drawImage(ibm, 0, 0);
-				console.timeEnd("drawing image");
+  if (e.dataTransfer.items) {
+    if (e.dataTransfer.items[0].kind === "file") {
+      const file = e.dataTransfer.items[0].getAsFile();
+      const output = document.getElementById("image-display");
+      output.src = URL.createObjectURL(file);
 
-				const wasmStart = Date.now();
-				const wasmResult = wasm.find_colors(ctx, ibm.width, ibm.height);
-				const wasmEnd = Date.now();
+      createImageBitmap(file).then((ibm) => {
+        let ctx;
 
-				const wasmSwatches = document.getElementById("wasm-swatches");
-				const wasmTime = document.getElementById("wasm-time");
-				wasmTime.textContent = `${wasmEnd - wasmStart}ms`;
-
-				wasmSwatches.textContent = "";
-
-				for (let i = 0; i < wasmResult.length; i++) {
-					let swatch = document.createElement("span");
-
-					const color = document.createTextNode(wasmResult[i]);
-					swatch.appendChild(color);
-					swatch.classList.add("p-2");
-					swatch.classList.add("mb-2");
-					swatch.style.backgroundColor = wasmResult[i];
-
-					wasmSwatches.appendChild(swatch);
-				}
-
-				const jsStart = Date.now();
-				const jsResult = jsFindColors(ctx, ibm.width, ibm.height);
-				const jsEnd = Date.now();
-
-				const jsSwatches = document.getElementById("js-swatches");
-        const jsTime = document.getElementById("js-time");
-        jsTime.textContent = `${jsEnd - jsStart}ms`;
-        jsSwatches.textContent = "";
-
-        for (let i = 0; i < jsResult.length; i++) {
-          let swatch = document.createElement("span");
-
-          const color = document.createTextNode(jsResult[i]);
-          swatch.appendChild(color);
-          swatch.classList.add("p-2");
-          swatch.classList.add("mb-2");
-          swatch.style.backgroundColor = jsResult[i];
-
-          jsSwatches.appendChild(swatch);
+        console.time("finding canvas element");
+        if (typeof OffscreenCanvasRenderingContext === "function") {
+          const canvas = new OffscreenCanvas(ibm.width, ibm.height);
+          ctx = canvas.getContext("2d");
+        } else {
+          const canvas = document.createElement("canvas");
+          ctx = canvas.getContext("2d");
+          ctx.canvas.height = ibm.height;
+          ctx.canvas.width = ibm.width;
         }
+        console.timeEnd("finding canvas element");
 
-				// console.log(`Time taken: ${end - start}ms`);
+        console.time("drawing image");
+        ctx.drawImage(ibm, 0, 0);
+        console.timeEnd("drawing image");
 
-				// // PLOT DATA
+        // const wasmStart = Date.now();
+        // const wasmInstance = new ImageKmeans(ctx, ibm.width, ibm.height);
+        // // const wasmResult = wasmInstance.with_fixed_k_number(4);
+        // const otherResult = wasmInstance.with_derived_k_number();
+        // const wasmEnd = Date.now();
 
-				// const plotData = [
-				// 	{
-				// 		x: unpack(colorData, "r"),
-				// 		y: unpack(colorData, "g"),
-				// 		z: unpack(colorData, "b"),
-				// 		mode: "markers",
-				// 		type: "scatter3d",
-				// 		marker: {
-				// 			color: colorData.map((c) => `rgb(${c.r}, ${c.g}, ${c.b})`),
-				// 			size: 2,
-				// 		},
-				// 	},
-				// ];
+        // const wasmSwatches = document.getElementById("wasm-swatches");
+        // const wasmTime = document.getElementById("wasm-time");
+        // wasmTime.textContent = `${wasmEnd - wasmStart}ms`;
 
-				// Plotly.newPlot(plot, plotData, layout, config);
+        // wasmSwatches.textContent = "";
 
-				// // END PLOT DATA
-			});
-		}
-	}
+        // for (let i = 0; i < wasmResult.length; i++) {
+        //   let swatch = document.createElement("span");
+
+        //   const color = document.createTextNode(wasmResult[i]);
+        //   swatch.appendChild(color);
+        //   swatch.classList.add("p-2");
+        //   swatch.classList.add("mb-2");
+        //   swatch.style.backgroundColor = wasmResult[i];
+
+        //   wasmSwatches.appendChild(swatch);
+        // }
+
+        // const wasmDerrived = document.getElementById("wasm-derrived");
+        // wasmDerrived.textContent = "";
+        // console.log("other", otherResult);
+
+        // for (let i = 0; i < otherResult.length; i++) {
+        //   let swatch = document.createElement("span");
+
+        //   const color = document.createTextNode(otherResult[i]);
+        //   swatch.appendChild(color);
+        //   swatch.classList.add("p-2");
+        //   swatch.classList.add("mb-2");
+        //   swatch.style.backgroundColor = otherResult[i];
+
+        //   wasmDerrived.appendChild(swatch);
+        // }
+
+        // const jsStart = Date.now();
+        // const jsResult = jsFindColors(ctx, ibm.width, ibm.height);
+        // const jsEnd = Date.now();
+
+        // const jsSwatches = document.getElementById("js-swatches");
+        // const jsTime = document.getElementById("js-time");
+        // jsTime.textContent = `${jsEnd - jsStart}ms`;
+        // jsSwatches.textContent = "";
+
+        // for (let i = 0; i < jsResult.length; i++) {
+        //   let swatch = document.createElement("span");
+
+        //   const color = document.createTextNode(jsResult[i]);
+        //   swatch.appendChild(color);
+        //   swatch.classList.add("p-2");
+        //   swatch.classList.add("mb-2");
+        //   swatch.style.backgroundColor = jsResult[i];
+
+        //   jsSwatches.appendChild(swatch);
+        // }
+
+        // const end = Date.now();
+
+        // console.log(`Time taken: ${end - start}ms`);
+
+        // // PLOT DATA
+
+        // const plotData = [
+        // 	{
+        // 		x: unpack(colorData, "r"),
+        // 		y: unpack(colorData, "g"),
+        // 		z: unpack(colorData, "b"),
+        // 		mode: "markers",
+        // 		type: "scatter3d",
+        // 		marker: {
+        // 			color: colorData.map((c) => `rgb(${c.r}, ${c.g}, ${c.b})`),
+        // 			size: 2,
+        // 		},
+        // 	},
+        // ];
+
+        // Plotly.newPlot(plot, plotData, layout, config);
+
+        // // END PLOT DATA
+      });
+    }
+  }
+});*/
+
+dropZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
 });
-
-dropZone.addEventListener('dragover', e => {
-	e.preventDefault();
-});
-
 
 function calcEuclideanDist(p, q) {
   return Math.sqrt(
@@ -178,8 +209,8 @@ function calcNewClusters(kClusters, colorData) {
 }
 
 function jsFindColors(ctx, imageWidth, imageHeight) {
-	console.time('Build color data');
-	const imageData = ctx.getImageData(0, 0, imageWidth, imageHeight).data;
+  console.time("Build color data");
+  const imageData = ctx.getImageData(0, 0, imageWidth, imageHeight).data;
 
   let colorData = [];
 
@@ -226,12 +257,10 @@ function jsFindColors(ctx, imageWidth, imageHeight) {
     iterations += 1;
   } while (distanceShift >= 5 && iterations < 10);
 
-	return kClusters.map(
-    (k) => `#${k.r
-				.toString(16).padStart(2, "0")}${k.g
+  return kClusters.map(
+    (k) =>
+      `#${k.r.toString(16).padStart(2, "0")}${k.g
         .toString(16)
-        .padStart(2, "0")}${k.b
-				.toString(16)
-				.padStart(2, "0")}`
+        .padStart(2, "0")}${k.b.toString(16).padStart(2, "0")}`
   );
 }
